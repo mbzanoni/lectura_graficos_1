@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lectura de Gráficos</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f0e8;
+    --surface: #fffdf7;
+    --border: #d4c9b0;
+    --text: #1a1612;
+    --muted: #7a6e5f;
+    --accent: #2d5a3d;
+    --accent-light: #e8f0eb;
+    --warn: #8b3a1e;
+    --warn-light: #f5e8e3;
+    --gold: #b8860b;
+    --gold-light: #fdf6e3;
+    --pending: #5c4a1e;
+    --pending-light: #fef9ec;
+    --radius: 4px;
+    --shadow: 0 2px 12px rgba(26,22,18,0.08);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* ─── LAYOUT ─── */
+  .app { max-width: 720px; margin: 0 auto; padding: 32px 20px 80px; }
+
+  /* ─── HEADER ─── */
+  .header {
+    text-align: center;
+    margin-bottom: 40px;
+    border-bottom: 1.5px solid var(--border);
+    padding-bottom: 28px;
+  }
+  .header h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 2rem;
+    letter-spacing: -0.01em;
+    color: var(--text);
+  }
+  .header p {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin-top: 4px;
+  }
+  .header .dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+
+  /* ─── CARDS ─── */
+  .card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 28px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+  }
+
+  .card-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.2rem;
+    margin-bottom: 16px;
+    color: var(--text);
+  }
+
+  /* ─── INPUTS ─── */
+  label { font-size: 0.85rem; font-weight: 500; color: var(--muted); display: block; margin-bottom: 6px; }
+  input[type="text"], input[type="password"], textarea, select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    color: var(--text);
+    transition: border-color 0.15s;
+    outline: none;
+  }
+  input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 100px; }
+
+  /* ─── BUTTONS ─── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 22px;
+    border-radius: var(--radius);
+    border: 1.5px solid transparent;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-decoration: none;
+  }
+  .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-primary:hover { background: #1e3d2b; }
+  .btn-outline { background: transparent; color: var(--accent); border-color: var(--accent); }
+  .btn-outline:hover { background: var(--accent-light); }
+  .btn-warn { background: var(--warn); color: #fff; border-color: var(--warn); }
+  .btn-warn:hover { background: #6b2c16; }
+  .btn-ghost { background: transparent; color: var(--muted); border-color: var(--border); }
+  .btn-ghost:hover { background: var(--bg); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn-sm { padding: 6px 14px; font-size: 0.82rem; }
+
+  /* ─── BADGE ─── */
+  .badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.03em;
+  }
+  .badge-ok { background: var(--accent-light); color: var(--accent); }
+  .badge-pending { background: var(--pending-light); color: var(--pending); }
+  .badge-waiting { background: var(--gold-light); color: var(--gold); }
+
+  /* ─── LEVEL INDICATOR ─── */
+  .level-bar {
+    display: flex; gap: 6px; margin-bottom: 24px; flex-wrap: wrap;
+  }
+  .level-pip {
+    width: 28px; height: 6px;
+    border-radius: 3px;
+    background: var(--border);
+    transition: background 0.3s;
+  }
+  .level-pip.done { background: var(--accent); }
+  .level-pip.current { background: var(--gold); }
+
+  /* ─── GRAPH IMG ─── */
+  .graph-container {
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 20px;
+    background: #fff;
+    text-align: center;
+  }
+  .graph-container img {
+    max-width: 100%;
+    max-height: 380px;
+    display: block;
+    margin: 0 auto;
+  }
+  .graph-placeholder {
+    padding: 48px 20px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.85rem;
+  }
+
+  /* ─── QUESTIONS ─── */
+  .question-list { list-style: none; counter-reset: q; }
+  .question-list li {
+    counter-increment: q;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    font-size: 0.95rem;
+  }
+  .question-list li:last-child { border-bottom: none; }
+  .question-list li::before {
+    content: counter(q) ".";
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    color: var(--accent);
+    margin-right: 10px;
+  }
+
+  /* ─── STATUS BOX ─── */
+  .status-box {
+    padding: 14px 18px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .status-waiting { background: var(--gold-light); border: 1px solid #e0c060; color: var(--pending); }
+  .status-approved { background: var(--accent-light); border: 1px solid #a0c8a8; color: var(--accent); }
+  .status-completed { background: var(--pending-light); border: 1px solid #d4a090; color: var(--warn); }
+
+  /* ─── TEACHER TABLE ─── */
+  .teacher-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  .teacher-table th {
+    text-align: left;
+    padding: 8px 12px;
+    background: var(--bg);
+    border-bottom: 1.5px solid var(--border);
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .teacher-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .teacher-table tr:last-child td { border-bottom: none; }
+  .teacher-table tr:hover td { background: var(--bg); }
+
+  .answer-preview {
+    color: var(--muted);
+    font-size: 0.82rem;
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ─── MODAL (respuesta completa) ─── */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(26,22,18,0.5);
+    z-index: 100;
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 28px;
+    max-width: 520px; width: 90%;
+    box-shadow: 0 8px 40px rgba(26,22,18,0.18);
+  }
+  .modal h3 { font-family: 'DM Serif Display', serif; margin-bottom: 12px; }
+  .modal .answer-full {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px;
+    font-size: 0.92rem;
+    line-height: 1.7;
+    max-height: 200px; overflow-y: auto;
+    margin-bottom: 18px;
+    white-space: pre-wrap;
+  }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+  /* ─── UTIL ─── */
+  .row { display: flex; gap: 12px; align-items: center; }
+  .spacer { margin-top: 16px; }
+  .muted { color: var(--muted); font-size: 0.85rem; }
+  .mono { font-family: 'DM Mono', monospace; }
+  .hidden { display: none !important; }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ─── TOAST ─── */
+  #toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: var(--text); color: #fff;
+    padding: 10px 22px; border-radius: 20px;
+    font-size: 0.85rem; font-family: 'DM Mono', monospace;
+    transition: transform 0.3s; z-index: 200; pointer-events: none;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ─── SCREEN TRANSITIONS ─── */
+  .screen { animation: fadeIn 0.25s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  .group-id-display {
+    display: inline-block;
+    background: var(--accent-light);
+    color: var(--accent);
+    border-radius: 4px;
+    padding: 2px 10px;
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    font-size: 0.88rem;
+  }
+
+  .completed-banner {
+    text-align: center; padding: 40px 20px;
+  }
+  .completed-banner .big { font-family: 'DM Serif Display', serif; font-size: 2rem; margin-bottom: 8px; }
+  .completed-banner .sub { color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <h1><span class="dot"></span>Lectura de Gráficos</h1>
+    <p>Ciencias del comportamiento</p>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       PANTALLA: INICIO (login selector)
+  ════════════════════════════════════════ -->
+  <div id="screen-home" class="screen">
+    <div class="card">
+      <div class="card-title">Ingresar como…</div>
+      <div style="display:flex; gap:12px; flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="showScreen('screen-group-login')">🔬 Soy un grupo</button>
+        <button class="btn btn-ghost" onclick="showScreen('screen-teacher-login')">🧑‍🏫 Soy docente</button>
+      </div>
+    </div>
+
+
+  </div>
+
+  <!-- ════════════════════════════════════════
+       PANTALLA: LOGIN GRUPO
+  ════════════════════════════════════════ -->
+  <div id="screen-group-login" class="screen hidden">
+    <div class="card">
+      <div class="card-title">Ingreso del grupo</div>
+      <label>ID de grupo</label>
+      <input type="text" id="group-id-input" placeholder="ej. grupo_03" autocomplete="off"
+        onkeydown="if(event.key==='Enter') loginGroup()">
+      <div class="spacer">
+        <button class="btn btn-primary" onclick="loginGroup()">Entrar</button>
+        <button class="btn btn-ghost" onclick="showScreen('screen-home')" style="margin-left:8px;">Volver</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       PANTALLA: PANEL GRUPO
+  ════════════════════════════════════════ -->
+  <div id="screen-group" class="screen hidden">
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <span>Grupo: <span id="display-group-id" class="group-id-display"></span></span>
+      <button class="btn btn-ghost btn-sm" onclick="logoutGroup()">Salir</button>
+    </div>
+
+    <!-- Nivel completado -->
+    <div id="status-completed" class="status-box status-completed hidden">
+      🎉 ¡Completaste todos los niveles!
+    </div>
+
+    <!-- Esperando aprobación -->
+    <div id="status-waiting" class="status-box status-waiting hidden">
+      ⏳ Respuesta enviada. Esperando que la docente apruebe para continuar…
+      <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="loadGroupState()">↻ Actualizar</button>
+    </div>
+
+    <!-- Aprobado, puede avanzar -->
+    <div id="status-approved" class="status-box status-approved hidden">
+      ✅ ¡Nivel aprobado! Podés avanzar al siguiente.
+    </div>
+
+    <div id="group-content">
+      <!-- Barra de niveles -->
+      <div id="level-bar" class="level-bar"></div>
+
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:14px;">
+          <span class="card-title" style="margin-bottom:0" id="level-title">Nivel 1</span>
+          <span class="badge badge-pending" id="level-badge">EN CURSO</span>
+        </div>
+
+        <!-- Gráfico -->
+        <div class="graph-container" id="graph-container">
+          <div class="graph-placeholder">Cargando gráfico…</div>
+        </div>
+
+        <!-- Preguntas -->
+        <p style="font-weight:600; margin-bottom:8px; font-size:0.9rem;">Preguntas para este nivel:</p>
+        <ul class="question-list" id="question-list"></ul>
+
+        <!-- Respuesta -->
+        <div class="spacer" id="answer-section">
+          <label>Tu respuesta grupal</label>
+          <textarea id="group-answer" placeholder="Escriban su respuesta acá…"></textarea>
+          <div class="spacer">
+            <button class="btn btn-primary" id="btn-submit-answer" onclick="submitAnswer()">Enviar respuesta</button>
+          </div>
+        </div>
+
+        <!-- Respuesta enviada (readonly) -->
+        <div id="answer-sent-section" class="hidden spacer">
+          <label>Respuesta enviada</label>
+          <div style="background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:12px;font-size:0.9rem;line-height:1.6;white-space:pre-wrap" id="answer-sent-display"></div>
+        </div>
+      </div>
+
+      <!-- Botón avanzar (solo si aprobado) -->
+      <div id="btn-advance-wrap" class="hidden" style="text-align:right;">
+        <button class="btn btn-primary" onclick="advanceLevel()">Siguiente nivel →</button>
+      </div>
+    </div>
+
+    <!-- Pantalla de finalización -->
+    <div id="completed-view" class="hidden completed-banner">
+      <div class="big">🏆 ¡Completaron todos los niveles!</div>
+      <div class="sub">Excelente trabajo grupal.</div>
+    </div>
+
+  </div>
+
+  <!-- ════════════════════════════════════════
+       PANTALLA: LOGIN DOCENTE
+  ════════════════════════════════════════ -->
+  <div id="screen-teacher-login" class="screen hidden">
+    <div class="card">
+      <div class="card-title">Acceso docente</div>
+      <label>Contraseña</label>
+      <input type="password" id="teacher-pass-input" placeholder="••••••••"
+        onkeydown="if(event.key==='Enter') loginTeacher()">
+      <div class="spacer">
+        <button class="btn btn-primary" onclick="loginTeacher()">Entrar</button>
+        <button class="btn btn-ghost" onclick="showScreen('screen-home')" style="margin-left:8px;">Volver</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       PANTALLA: PANEL DOCENTE
+  ════════════════════════════════════════ -->
+  <div id="screen-teacher" class="screen hidden">
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <span style="font-family:'DM Serif Display',serif; font-size:1.2rem;">Panel docente</span>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-outline btn-sm" onclick="loadTeacherData()">↻ Actualizar</button>
+        <button class="btn btn-ghost btn-sm" onclick="logoutTeacher()">Salir</button>
+      </div>
+    </div>
+
+    <div class="card" style="padding:0; overflow:hidden;">
+      <table class="teacher-table" id="teacher-table">
+        <thead>
+          <tr>
+            <th>Grupo</th>
+            <th>Nivel</th>
+            <th>Estado</th>
+            <th>Última respuesta</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody id="teacher-tbody">
+          <tr><td colspan="5" style="padding:24px; text-align:center; color:var(--muted);">Cargando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="muted" style="margin-top:12px; font-size:0.8rem;">Hacé clic en "Ver" para leer la respuesta completa antes de aprobar.</p>
+  </div>
+
+</div>
+
+<!-- MODAL respuesta completa -->
+<div class="modal-overlay" id="modal-answer">
+  <div class="modal">
+    <h3 id="modal-title">Respuesta del grupo</h3>
+    <p class="muted" style="margin-bottom:10px; font-size:0.82rem;" id="modal-meta"></p>
+    <div class="answer-full" id="modal-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cerrar</button>
+      <button class="btn btn-primary" id="modal-approve-btn">Aprobar ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+
+<script>
+// ══════════════════════════════════════════════════════════════════
+//  ⚙️  CONFIGURACIÓN — Editá esto para personalizar la actividad
+// ══════════════════════════════════════════════════════════════════
+
+const TEACHER_PASSWORD = "belu_micromaster";   // ← cambiá esto
+
+// Definición de niveles: cada nivel tiene imagen(es) y preguntas.
+// Podés agregar o quitar niveles libremente.
+const LEVELS = [
+  {
+    id: 1,
+    title: "Nivel 1",
+    // Podés usar una URL directa de GitHub raw, Drive (con permisos), o cualquier URL pública
+    image: "https://raw.githubusercontent.com/mbzanoni/lectura_graficos_1/main/imagenes/nivel_1.png",
+    questions: [
+      "Describí los resultados del gráfico. ¿Qué problema serio hay con este gráfico?"
+    ]
+  },
+  {
+    id: 2,
+    title: "Nivel 2",
+    image: "https://raw.githubusercontent.com/mbzanoni/lectura_graficos_1/main/imagenes/nivel_2.png",
+    // ^ reemplazá con tu imagen real
+    questions: [
+      "¿Qué intenta mostrar el gráfico? ¿Qué problema serio hay con esta visualización?"
+    ]
+  },
+  {
+    id: 3,
+    title: "Nivel 3",
+    image: "https://raw.githubusercontent.com/mbzanoni/lectura_graficos_1/main/imagenes/nivel_3.png", // Dejá vacío si todavía no tenés imagen
+    questions: [
+      "Contexto: preguntaron a habitantes canadienses (separados por Quebec vs. el resto) si confiaban ( Rta : si o no) en las personas en general, personas de su barrio, personas del trabajo o colegio. En el eje y muestran el % de personas que dijo que sí. ¿Qué problema serio identificás? ¿Pensás que hubo una decisión editorial?"
+    ]
+  },
+  {
+    id: 4,
+    title: "Nivel 4",
+    image: "https://raw.githubusercontent.com/mbzanoni/lectura_graficos_1/main/imagenes/nivel_4.png",
+    // ^ reemplazá con tu imagen real
+    questions: [
+      "A simple vista, ¿qué intenta mostrar el gráfico? ¿Qué problema serio hay con esta visualización?"
+    ]
+  },
+  {
+    id: 5,
+    title: "Nivel 5",
+    image: "https://raw.githubusercontent.com/mbzanoni/lectura_graficos_1/main/imagenes/nivel_5.png",
+    // ^ reemplazá con tu imagen real
+    questions: [
+      "¿Qué mensaje transmite el gráfico? Identificá alguna variable que no se esté ponderando y que si se la considerara ese gráfico y por ende la conclusión se verían modificados."
+    ]
+  },
+  {
+    id: 6,
+    title: "Nivel 6",
+    image: "https://raw.githubusercontent.com/mbzanoni/lectura_graficos_1/main/imagenes/nivel_6.png",
+    // ^ reemplazá con tu imagen real
+    questions: [
+      "¿Qué mensaje busca transmitir el gráfico? Identificá un problema serio relacionado a la visualización."
+    ]
+  }
+  // Agregá más niveles acá siguiendo el mismo formato
+];
+
+// Contraseña de ejemplo para grupos (opcional, si querés validar IDs conocidos)
+// Dejalo vacío para permitir cualquier ID
+const VALID_GROUP_IDS = []; // ej. ["grupo_01", "grupo_02", ...] o [] para abrir
+
+// ══════════════════════════════════════════════════════════════════
+//  ESTADO
+// ══════════════════════════════════════════════════════════════════
+
+let currentGroup = null;
+let currentGroupData = null;
+let supabaseUrl = "https://nahfevuesipvzlzqabwm.supabase.co";
+let supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5haGZldnVlc2lwdnpsenFhYndtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyNjY3MjYsImV4cCI6MjA5MTg0MjcyNn0.R74c52SlSZZCf8D6U7rA4KnBNLf78hVVLE4-BAlkrJw";
+let modalCurrentGroup = null;
+
+// ══════════════════════════════════════════════════════════════════
+//  SUPABASE HELPERS (sin SDK, fetch directo)
+// ══════════════════════════════════════════════════════════════════
+
+const sbFetch = async (path, opts = {}) => {
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error("Configuración de Supabase incompleta");
+  }
+  const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
+    ...opts,
+    headers: {
+      "Content-Type": "application/json",
+      "apikey": supabaseKey,
+      "Authorization": `Bearer ${supabaseKey}`,
+      "Prefer": opts.prefer || "return=representation",
+      ...(opts.headers || {})
+    }
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(err);
+  }
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+};
+
+// Obtener estado de un grupo
+const getGroupState = async (groupId) => {
+  const rows = await sbFetch(`group_progress?group_id=eq.${encodeURIComponent(groupId)}&select=*`);
+  return rows && rows.length > 0 ? rows[0] : null;
+};
+
+// Crear o actualizar estado de grupo
+const upsertGroupState = async (state) => {
+  return await sbFetch(`group_progress`, {
+    method: "POST",
+    prefer: "resolution=merge-duplicates,return=representation",
+    headers: { "Prefer": "resolution=merge-duplicates,return=representation" },
+    body: JSON.stringify(state)
+  });
+};
+
+// Obtener todos los grupos
+const getAllGroups = async () => {
+  return await sbFetch(`group_progress?select=*&order=group_id.asc`);
+};
+
+// ══════════════════════════════════════════════════════════════════
+//  CONFIGURACIÓN LOCAL
+// ══════════════════════════════════════════════════════════════════
+
+const saveConfig = () => {}; // config hardcodeada
+
+
+// ══════════════════════════════════════════════════════════════════
+//  NAVEGACIÓN
+// ══════════════════════════════════════════════════════════════════
+
+const showScreen = (id) => {
+  document.querySelectorAll(".screen").forEach(s => s.classList.add("hidden"));
+  const el = document.getElementById(id);
+  if (el) { el.classList.remove("hidden"); }
+};
+
+// ══════════════════════════════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════════════════════════════
+
+let toastTimeout;
+const toast = (msg) => {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => el.classList.remove("show"), 2800);
+};
+
+// ══════════════════════════════════════════════════════════════════
+//  LOGIN GRUPO
+// ══════════════════════════════════════════════════════════════════
+
+const loginGroup = async () => {
+  const id = document.getElementById("group-id-input").value.trim().toLowerCase();
+  if (!id) { toast("Ingresá un ID de grupo"); return; }
+
+  if (VALID_GROUP_IDS.length > 0 && !VALID_GROUP_IDS.includes(id)) {
+    toast("ID de grupo no reconocido"); return;
+  }
+
+  if (!supabaseUrl || !supabaseKey) {
+    toast("Configurá Supabase primero en la pantalla de inicio"); return;
+  }
+
+  currentGroup = id;
+
+  try {
+    let state = await getGroupState(id);
+
+    if (!state) {
+      // Primera vez: crear registro inicial
+      const created = await upsertGroupState({
+        group_id: id,
+        current_level: 1,
+        status: "answering",   // answering | waiting | approved | completed
+        current_answer: null,
+        updated_at: new Date().toISOString()
+      });
+      state = created && created[0] ? created[0] : {
+        group_id: id, current_level: 1, status: "answering", current_answer: null
+      };
+    }
+
+    currentGroupData = state;
+    renderGroupPanel();
+    showScreen("screen-group");
+  } catch (e) {
+    toast("Error al conectar: " + e.message);
+  }
+};
+
+const logoutGroup = () => {
+  currentGroup = null;
+  currentGroupData = null;
+  document.getElementById("group-id-input").value = "";
+  showScreen("screen-home");
+};
+
+// ══════════════════════════════════════════════════════════════════
+//  PANEL GRUPO — RENDER
+// ══════════════════════════════════════════════════════════════════
+
+const renderGroupPanel = () => {
+  if (!currentGroupData) return;
+  const { current_level, status, current_answer } = currentGroupData;
+  const levelIndex = current_level - 1;
+  const level = LEVELS[levelIndex];
+
+  document.getElementById("display-group-id").textContent = currentGroup;
+
+  // ── Status banners
+  document.getElementById("status-waiting").classList.toggle("hidden", status !== "waiting");
+  document.getElementById("status-approved").classList.toggle("hidden", status !== "approved");
+  document.getElementById("status-completed").classList.toggle("hidden", status !== "completed");
+
+  const isCompleted = status === "completed" || levelIndex >= LEVELS.length;
+
+  document.getElementById("group-content").classList.toggle("hidden", isCompleted);
+  document.getElementById("completed-view").classList.toggle("hidden", !isCompleted);
+
+  if (isCompleted) return;
+
+  // ── Barra de niveles
+  const bar = document.getElementById("level-bar");
+  bar.innerHTML = LEVELS.map((l, i) => {
+    let cls = "level-pip";
+    if (i < levelIndex) cls += " done";
+    else if (i === levelIndex) cls += " current";
+    return `<div class="${cls}" title="Nivel ${l.id}"></div>`;
+  }).join("");
+
+  // ── Título y badge
+  document.getElementById("level-title").textContent = level ? level.title : `Nivel ${current_level}`;
+  const badge = document.getElementById("level-badge");
+  if (status === "waiting") { badge.className = "badge badge-waiting"; badge.textContent = "ESPERANDO OK"; }
+  else if (status === "approved") { badge.className = "badge badge-ok"; badge.textContent = "APROBADO"; }
+  else { badge.className = "badge badge-pending"; badge.textContent = "EN CURSO"; }
+
+  // ── Gráfico
+  const gc = document.getElementById("graph-container");
+  if (level && level.image) {
+    gc.innerHTML = `<img src="${level.image}" alt="Gráfico nivel ${current_level}" loading="lazy">`;
+  } else {
+    gc.innerHTML = `<div class="graph-placeholder">📊 Imagen del gráfico — Nivel ${current_level}<br><small>(cargá la URL en LEVELS)</small></div>`;
+  }
+
+  // ── Preguntas
+  const ql = document.getElementById("question-list");
+  ql.innerHTML = level ? level.questions.map(q => `<li>${q}</li>`).join("") : "<li>Sin preguntas configuradas</li>";
+
+  // ── Sección respuesta
+  const canAnswer = status === "answering";
+  const hasSent = status === "waiting" || status === "approved";
+
+  document.getElementById("answer-section").classList.toggle("hidden", !canAnswer);
+  document.getElementById("answer-sent-section").classList.toggle("hidden", !hasSent);
+
+  if (hasSent && current_answer) {
+    document.getElementById("answer-sent-display").textContent = current_answer;
+  }
+
+  // ── Botón avanzar
+  document.getElementById("btn-advance-wrap").classList.toggle("hidden", status !== "approved");
+};
+
+// ══════════════════════════════════════════════════════════════════
+//  ENVIAR RESPUESTA (grupo)
+// ══════════════════════════════════════════════════════════════════
+
+const submitAnswer = async () => {
+  const answer = document.getElementById("group-answer").value.trim();
+  if (!answer) { toast("Escribí una respuesta antes de enviar"); return; }
+
+  const btn = document.getElementById("btn-submit-answer");
+  btn.innerHTML = '<span class="spinner"></span> Enviando…';
+  btn.disabled = true;
+
+  try {
+    const updated = await upsertGroupState({
+      group_id: currentGroup,
+      current_level: currentGroupData.current_level,
+      status: "waiting",
+      current_answer: answer,
+      updated_at: new Date().toISOString()
+    });
+    currentGroupData = updated && updated[0] ? updated[0] : { ...currentGroupData, status: "waiting", current_answer: answer };
+    document.getElementById("group-answer").value = "";
+    renderGroupPanel();
+    toast("Respuesta enviada ✓");
+  } catch (e) {
+    toast("Error al enviar: " + e.message);
+    btn.innerHTML = "Enviar respuesta";
+    btn.disabled = false;
+  }
+};
+
+// ══════════════════════════════════════════════════════════════════
+//  AVANZAR AL SIGUIENTE NIVEL (grupo)
+// ══════════════════════════════════════════════════════════════════
+
+const advanceLevel = async () => {
+  const nextLevel = currentGroupData.current_level + 1;
+  const isLast = nextLevel > LEVELS.length;
+
+  try {
+    const updated = await upsertGroupState({
+      group_id: currentGroup,
+      current_level: isLast ? currentGroupData.current_level : nextLevel,
+      status: isLast ? "completed" : "answering",
+      current_answer: null,
+      updated_at: new Date().toISOString()
+    });
+    currentGroupData = updated && updated[0] ? updated[0] : {
+      ...currentGroupData,
+      current_level: isLast ? currentGroupData.current_level : nextLevel,
+      status: isLast ? "completed" : "answering",
+      current_answer: null
+    };
+    renderGroupPanel();
+    if (!isLast) toast(`Nivel ${nextLevel} desbloqueado 🎯`);
+  } catch (e) {
+    toast("Error: " + e.message);
+  }
+};
+
+// ══════════════════════════════════════════════════════════════════
+//  ACTUALIZAR ESTADO (grupo, polling manual)
+// ══════════════════════════════════════════════════════════════════
+
+const loadGroupState = async () => {
+  if (!currentGroup) return;
+  try {
+    const state = await getGroupState(currentGroup);
+    if (state) {
+      currentGroupData = state;
+      renderGroupPanel();
+      toast("Estado actualizado");
+    }
+  } catch (e) {
+    toast("Error al actualizar: " + e.message);
+  }
+};
+
+// ══════════════════════════════════════════════════════════════════
+//  LOGIN DOCENTE
+// ══════════════════════════════════════════════════════════════════
+
+const loginTeacher = async () => {
+  const pass = document.getElementById("teacher-pass-input").value;
+  if (pass !== TEACHER_PASSWORD) {
+    toast("Contraseña incorrecta"); return;
+  }
+  if (!supabaseUrl || !supabaseKey) {
+    toast("Configurá Supabase primero en la pantalla de inicio"); return;
+  }
+  document.getElementById("teacher-pass-input").value = "";
+  showScreen("screen-teacher");
+  await loadTeacherData();
+};
+
+const logoutTeacher = () => {
+  showScreen("screen-home");
+};
+
+// ══════════════════════════════════════════════════════════════════
+//  PANEL DOCENTE — CARGAR DATOS
+// ══════════════════════════════════════════════════════════════════
+
+const loadTeacherData = async () => {
+  const tbody = document.getElementById("teacher-tbody");
+  tbody.innerHTML = `<tr><td colspan="5" style="padding:24px;text-align:center;color:var(--muted)">Cargando…</td></tr>`;
+
+  try {
+    const groups = await getAllGroups();
+
+    if (!groups || groups.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" style="padding:24px;text-align:center;color:var(--muted)">Ningún grupo se ha registrado todavía.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = groups.map(g => {
+      const level = LEVELS[g.current_level - 1];
+      const levelLabel = level ? level.title : `Nivel ${g.current_level}`;
+      const hasAnswer = g.status === "waiting" && g.current_answer;
+
+      let statusBadge = "";
+      if (g.status === "waiting") statusBadge = `<span class="badge badge-waiting">ESPERANDO</span>`;
+      else if (g.status === "approved") statusBadge = `<span class="badge badge-ok">APROBADO</span>`;
+      else if (g.status === "completed") statusBadge = `<span class="badge badge-ok">✓ COMPLETÓ</span>`;
+      else statusBadge = `<span class="badge badge-pending">EN CURSO</span>`;
+
+      const answerPreview = g.current_answer
+        ? `<span class="answer-preview">${escapeHtml(g.current_answer)}</span>`
+        : `<span style="color:var(--muted);font-size:0.8rem">—</span>`;
+
+      const actionBtn = hasAnswer
+        ? `<button class="btn btn-outline btn-sm" onclick="openModal('${escapeAttr(g.group_id)}')">Ver y aprobar</button>`
+        : (g.status === "approved"
+            ? `<span style="color:var(--muted);font-size:0.8rem">Aprobado ✓</span>`
+            : `<span style="color:var(--muted);font-size:0.8rem">—</span>`);
+
+      return `<tr>
+        <td class="mono">${escapeHtml(g.group_id)}</td>
+        <td style="font-size:0.85rem">${escapeHtml(levelLabel)}</td>
+        <td>${statusBadge}</td>
+        <td>${answerPreview}</td>
+        <td>${actionBtn}</td>
+      </tr>`;
+    }).join("");
+
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="5" style="padding:24px;text-align:center;color:var(--warn)">Error: ${escapeHtml(e.message)}</td></tr>`;
+  }
+};
+
+// ══════════════════════════════════════════════════════════════════
+//  MODAL — VER RESPUESTA COMPLETA
+// ══════════════════════════════════════════════════════════════════
+
+const openModal = async (groupId) => {
+  let groupData;
+  try {
+    groupData = await getGroupState(groupId);
+  } catch(e) {
+    toast("Error al cargar: " + e.message); return;
+  }
+  if (!groupData) return;
+
+  const level = LEVELS[groupData.current_level - 1];
+  document.getElementById("modal-title").textContent = `Respuesta · ${groupId}`;
+  document.getElementById("modal-meta").textContent = level ? `${level.title}` : `Nivel ${groupData.current_level}`;
+  document.getElementById("modal-body").textContent = groupData.current_answer || "(sin respuesta)";
+
+  modalCurrentGroup = groupData;
+
+  const approveBtn = document.getElementById("modal-approve-btn");
+  approveBtn.onclick = () => approveGroup(groupId);
+  approveBtn.disabled = groupData.status !== "waiting";
+  approveBtn.textContent = groupData.status === "waiting" ? "Aprobar ✓" : "Ya aprobado";
+
+  document.getElementById("modal-answer").classList.add("open");
+};
+
+const closeModal = () => {
+  document.getElementById("modal-answer").classList.remove("open");
+  modalCurrentGroup = null;
+};
+
+// ══════════════════════════════════════════════════════════════════
+//  APROBAR NIVEL (docente)
+// ══════════════════════════════════════════════════════════════════
+
+const approveGroup = async (groupId) => {
+  try {
+    const current = await getGroupState(groupId);
+    if (!current) { toast("No se encontró el grupo"); return; }
+
+    await upsertGroupState({
+      group_id: groupId,
+      current_level: current.current_level,
+      status: "approved",
+      current_answer: current.current_answer,
+      updated_at: new Date().toISOString()
+    });
+
+    toast(`✓ ${groupId} aprobado en ${LEVELS[current.current_level-1]?.title || 'nivel ' + current.current_level}`);
+    closeModal();
+    await loadTeacherData();
+  } catch (e) {
+    toast("Error al aprobar: " + e.message);
+  }
+};
+
+// ══════════════════════════════════════════════════════════════════
+//  UTILS
+// ══════════════════════════════════════════════════════════════════
+
+const escapeHtml = (str) => {
+  if (!str) return "";
+  return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+};
+const escapeAttr = (str) => str.replace(/'/g, "\\'");
+
+// Cerrar modal al click fuera
+document.getElementById("modal-answer").addEventListener("click", function(e) {
+  if (e.target === this) closeModal();
+});
+
+// ══════════════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════════════
+
+showScreen("screen-home");
+</script>
+</body>
+</html>
